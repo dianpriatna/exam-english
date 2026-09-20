@@ -200,9 +200,9 @@
       <header class="top-bar">
         <div class="exam-title">
           <span class="pulse-indicator"></span>
-          <span>Sesi Ujian Aktif</span>
+          <span class="title-text">Sesi Ujian Aktif</span>
           {#if tabSwitchCount > 0}
-            <span class="violation-badge">⚠️ Pelanggaran Tab: {tabSwitchCount}</span>
+            <span class="violation-badge">⚠️ Pelanggaran: {tabSwitchCount}</span>
           {/if}
         </div>
         <div class="timer-badge" class:warning={timeLeft < 300}>
@@ -245,15 +245,19 @@
     padding: 0;
     width: 100%;
     height: 100%;
+    min-height: 100dvh;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background-color: #f8fafc;
     color: #0f172a;
-    user-select: none; /* Disables text selection for added exam security */
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
   }
 
   .exam-app {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -265,18 +269,20 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.5rem;
+    padding: 1rem;
     background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    min-height: 100dvh;
   }
 
   .login-card {
     background: #ffffff;
     width: 100%;
-    max-width: 420px;
-    padding: 2.5rem;
+    max-width: 440px;
+    padding: 2.25rem 1.75rem;
     border-radius: 16px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
     text-align: center;
+    box-sizing: border-box;
   }
 
   .icon-badge {
@@ -321,15 +327,17 @@
 
   .field-group input {
     padding: 0.85rem 1rem;
-    font-size: 1rem;
+    font-size: 1.05rem;
     border: 2px solid #e2e8f0;
-    border-radius: 8px;
+    border-radius: 10px;
     outline: none;
     transition: border-color 0.2s;
     text-align: center;
     letter-spacing: 0.1em;
     font-weight: 600;
     text-transform: uppercase;
+    box-sizing: border-box;
+    width: 100%;
   }
 
   .field-group input:focus {
@@ -351,11 +359,12 @@
     color: #ffffff;
     font-size: 1rem;
     font-weight: 600;
-    padding: 0.85rem;
+    padding: 0.9rem;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     transition: background-color 0.2s, transform 0.1s;
+    width: 100%;
   }
 
   .btn-submit:hover {
@@ -371,28 +380,33 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 100vh;
+    height: 100dvh;
     position: relative;
+    overflow: hidden;
   }
 
   .top-bar {
-    height: 56px;
+    min-height: 52px;
+    height: 52px;
     background-color: #0f172a;
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 1.5rem;
+    padding: 0 1.25rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     z-index: 10;
+    box-sizing: border-box;
+    flex-shrink: 0;
   }
 
   .exam-title {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    font-size: 0.95rem;
+    gap: 0.5rem;
+    font-size: 0.9rem;
     font-weight: 600;
+    white-space: nowrap;
   }
 
   .pulse-indicator {
@@ -402,6 +416,7 @@
     border-radius: 50%;
     box-shadow: 0 0 8px #22c55e;
     animation: pulse 2s infinite;
+    flex-shrink: 0;
   }
 
   @keyframes pulse {
@@ -413,21 +428,24 @@
   .violation-badge {
     background-color: #7f1d1d;
     color: #fecaca;
-    padding: 0.2rem 0.6rem;
+    padding: 0.2rem 0.5rem;
     border-radius: 6px;
     font-size: 0.75rem;
-    margin-left: 0.5rem;
+    margin-left: 0.25rem;
+    white-space: nowrap;
   }
 
   .timer-badge {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
     background-color: #1e293b;
-    padding: 0.4rem 1rem;
+    padding: 0.35rem 0.85rem;
     border-radius: 999px;
     border: 1px solid #334155;
     transition: background-color 0.3s, border-color 0.3s;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .timer-badge.warning {
@@ -443,7 +461,7 @@
   }
 
   .timer-label {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     color: #94a3b8;
   }
@@ -454,7 +472,7 @@
 
   .timer-value {
     font-family: monospace;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     font-weight: 700;
     letter-spacing: 0.05em;
   }
@@ -462,13 +480,17 @@
   .iframe-container {
     flex: 1;
     width: 100%;
+    height: calc(100dvh - 52px);
     background-color: #ffffff;
     position: relative;
+    overflow: hidden;
   }
 
   .iframe-container iframe {
     width: 100%;
     height: 100%;
+    min-width: 100%;
+    min-height: 100%;
     border: none;
     display: block;
   }
@@ -483,32 +505,34 @@
     align-items: center;
     justify-content: center;
     z-index: 100;
-    padding: 1.5rem;
+    padding: 1.25rem;
+    box-sizing: border-box;
   }
 
   .modal-card {
     background: #ffffff;
-    max-width: 420px;
+    max-width: 400px;
     width: 100%;
-    padding: 2rem;
+    padding: 1.75rem 1.25rem;
     border-radius: 16px;
     text-align: center;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    box-sizing: border-box;
   }
 
   .modal-icon {
-    font-size: 3rem;
+    font-size: 2.75rem;
     margin-bottom: 0.5rem;
   }
 
   .modal-card h3 {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     color: #dc2626;
     margin: 0 0 0.5rem 0;
   }
 
   .modal-card p {
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     color: #475569;
     line-height: 1.5;
     margin-bottom: 1.5rem;
@@ -523,10 +547,7 @@
     font-weight: 600;
     cursor: pointer;
     font-size: 0.9rem;
-  }
-
-  .btn-modal:hover {
-    background-color: #b91c1c;
+    width: 100%;
   }
 
   /* --- SECURITY / DEVTOOLS BLOCKED STYLES --- */
@@ -537,16 +558,18 @@
     justify-content: center;
     padding: 1.5rem;
     background-color: #0f172a;
+    min-height: 100dvh;
   }
 
   .security-card, .expired-card {
     background: #ffffff;
     width: 100%;
-    max-width: 450px;
-    padding: 3rem 2rem;
+    max-width: 440px;
+    padding: 2.5rem 1.5rem;
     border-radius: 16px;
     text-align: center;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
   }
 
   .security-icon, .expired-icon {
@@ -555,15 +578,52 @@
   }
 
   .security-card h2 {
-    font-size: 1.75rem;
+    font-size: 1.6rem;
     color: #dc2626;
     margin: 0 0 0.75rem 0;
   }
 
   .security-card p, .expired-card p {
-    font-size: 0.95rem;
+    font-size: 0.925rem;
     color: #475569;
     line-height: 1.6;
     margin: 0;
+  }
+
+  /* --- RESPONSIVE MOBILE BREAKPOINTS --- */
+  @media (max-width: 640px) {
+    .top-bar {
+      padding: 0 0.75rem;
+      height: 48px;
+      min-height: 48px;
+    }
+
+    .title-text {
+      display: none; /* Hide label on small mobile screens to prevent overflow */
+    }
+
+    .timer-badge {
+      padding: 0.25rem 0.6rem;
+    }
+
+    .timer-label {
+      font-size: 0.7rem;
+    }
+
+    .timer-value {
+      font-size: 0.95rem;
+    }
+
+    .login-card {
+      padding: 1.75rem 1.25rem;
+    }
+
+    .login-card h1 {
+      font-size: 1.4rem;
+    }
+
+    .iframe-container {
+      height: calc(100dvh - 48px);
+    }
   }
 </style>
