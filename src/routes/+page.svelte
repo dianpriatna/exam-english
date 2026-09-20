@@ -166,7 +166,7 @@
               id="token"
               type="text"
               bind:value={tokenInput}
-              placeholder="Contoh: 11ENGLISH"
+              placeholder="Masukkan Token..."
               autocomplete="off"
               required
             />
