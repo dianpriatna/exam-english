@@ -14,8 +14,14 @@
   let errorMessage = $state('');
   let isTimeExpired = $state(false);
 
-  // Interval reference for timer cleanup
+  // Security States
+  let isDevToolsOpen = $state(false);
+  let tabSwitchCount = $state(0);
+  let showTabWarning = $state(false);
+
+  // Interval references
   let timerInterval: ReturnType<typeof setInterval> | null = null;
+  let devToolsCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   // --- Formatted Time Helper (HH:MM:SS or MM:SS) ---
   const formattedTime = $derived.by(() => {
@@ -62,31 +68,90 @@
     if (cleanInput === VALID_TOKEN) {
       isAuthenticated = true;
       startTimer();
+      startSecurityMonitoring();
     } else {
       errorMessage = 'Token yang Anda masukkan salah. Silakan coba lagi.';
     }
   }
 
-  // --- Security & Event Listeners ---
+  // --- Anti-Cheat & Security Monitoring ---
   function preventContextMenu(e: MouseEvent) {
     e.preventDefault();
   }
 
+  function preventKeyboardShortcuts(e: KeyboardEvent) {
+    // Block F12
+    if (e.key === 'F12') {
+      e.preventDefault();
+      return false;
+    }
+
+    // Block Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C (DevTools)
+    if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) {
+      e.preventDefault();
+      return false;
+    }
+
+    // Block Ctrl+U (View Source), Ctrl+S (Save), Ctrl+P (Print)
+    if (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S' || e.key === 'p' || e.key === 'P')) {
+      e.preventDefault();
+      return false;
+    }
+  }
+
+  function handleVisibilityChange() {
+    if (document.hidden && isAuthenticated && !isTimeExpired) {
+      tabSwitchCount += 1;
+      showTabWarning = true;
+    }
+  }
+
+  function startSecurityMonitoring() {
+    // Check for DevTools opening via window size threshold
+    devToolsCheckInterval = setInterval(() => {
+      const threshold = 160;
+      const widthDiff = window.outerWidth - window.innerWidth > threshold;
+      const heightDiff = window.outerHeight - window.innerHeight > threshold;
+
+      if (widthDiff || heightDiff) {
+        isDevToolsOpen = true;
+      }
+    }, 1000);
+  }
+
+  function closeTabWarning() {
+    showTabWarning = false;
+  }
+
   onMount(() => {
-    // Disable right-click context menu globally
+    // Disable right-click & shortcut keys globally
     window.addEventListener('contextmenu', preventContextMenu);
+    window.addEventListener('keydown', preventKeyboardShortcuts);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
   });
 
   onDestroy(() => {
     stopTimer();
+    if (devToolsCheckInterval) clearInterval(devToolsCheckInterval);
     if (typeof window !== 'undefined') {
       window.removeEventListener('contextmenu', preventContextMenu);
+      window.removeEventListener('keydown', preventKeyboardShortcuts);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     }
   });
 </script>
 
 <div class="exam-app">
-  {#if !isAuthenticated}
+  {#if isDevToolsOpen}
+    <!-- DEVTOOLS BLOCKED VIEW -->
+    <div class="security-container">
+      <div class="security-card">
+        <div class="security-icon">🚫</div>
+        <h2>Akses Ujian Ditolak</h2>
+        <p>Terdeteksi penggunaan <strong>Developer Tools / Inspect Element</strong>. Sesi ujian Anda telah dibekukan demi menjaga integritas ujian.</p>
+      </div>
+    </div>
+  {:else if !isAuthenticated}
     <!-- LOGIN / TOKEN FORM VIEW -->
     <div class="login-container">
       <div class="login-card">
@@ -136,12 +201,27 @@
         <div class="exam-title">
           <span class="pulse-indicator"></span>
           <span>Sesi Ujian Aktif</span>
+          {#if tabSwitchCount > 0}
+            <span class="violation-badge">⚠️ Pelanggaran Tab: {tabSwitchCount}</span>
+          {/if}
         </div>
         <div class="timer-badge" class:warning={timeLeft < 300}>
           <span class="timer-label">Sisa Waktu:</span>
           <span class="timer-value">{formattedTime}</span>
         </div>
       </header>
+
+      <!-- TAB SWITCH WARNING MODAL -->
+      {#if showTabWarning}
+        <div class="modal-overlay">
+          <div class="modal-card">
+            <div class="modal-icon">⚠️</div>
+            <h3>Peringatan Integritas Ujian</h3>
+            <p>Anda terdeteksi berpindah tab atau meninggalkan layar ujian! Kejadian ini dicatat sebagai pelanggaran (Ke-{tabSwitchCount}).</p>
+            <button onclick={closeTabWarning} class="btn-modal">Saya Mengerti & Kembali ke Ujian</button>
+          </div>
+        </div>
+      {/if}
 
       <!-- FULL-SCREEN GOOGLE FORM IFRAME -->
       <main class="iframe-container">
@@ -292,6 +372,7 @@
     flex-direction: column;
     width: 100%;
     height: 100vh;
+    position: relative;
   }
 
   .top-bar {
@@ -327,6 +408,15 @@
     0% { opacity: 1; }
     50% { opacity: 0.4; }
     100% { opacity: 1; }
+  }
+
+  .violation-badge {
+    background-color: #7f1d1d;
+    color: #fecaca;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
   }
 
   .timer-badge {
@@ -383,8 +473,64 @@
     display: block;
   }
 
-  /* --- EXPIRED VIEW STYLES --- */
-  .expired-container {
+  /* --- MODAL WARNING STYLES --- */
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 1.5rem;
+  }
+
+  .modal-card {
+    background: #ffffff;
+    max-width: 420px;
+    width: 100%;
+    padding: 2rem;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  }
+
+  .modal-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .modal-card h3 {
+    font-size: 1.35rem;
+    color: #dc2626;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .modal-card p {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+  }
+
+  .btn-modal {
+    background-color: #dc2626;
+    color: #ffffff;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .btn-modal:hover {
+    background-color: #b91c1c;
+  }
+
+  /* --- SECURITY / DEVTOOLS BLOCKED STYLES --- */
+  .security-container, .expired-container {
     flex: 1;
     display: flex;
     align-items: center;
@@ -393,7 +539,7 @@
     background-color: #0f172a;
   }
 
-  .expired-card {
+  .security-card, .expired-card {
     background: #ffffff;
     width: 100%;
     max-width: 450px;
@@ -403,18 +549,18 @@
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
 
-  .expired-icon {
+  .security-icon, .expired-icon {
     font-size: 3.5rem;
     margin-bottom: 1rem;
   }
 
-  .expired-card h2 {
+  .security-card h2 {
     font-size: 1.75rem;
     color: #dc2626;
     margin: 0 0 0.75rem 0;
   }
 
-  .expired-card p {
+  .security-card p, .expired-card p {
     font-size: 0.95rem;
     color: #475569;
     line-height: 1.6;
