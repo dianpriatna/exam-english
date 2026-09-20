@@ -1,223 +1,423 @@
-<script>
-  const exams = [
-    {
-      title: 'Grammar',
-      desc: 'Test your knowledge of English grammar rules, tenses, and sentence structure.',
-      icon: 'G',
-      href: '/grammar',
-      color: '#2563eb',
-      bg: '#eff6ff'
-    },
-    {
-      title: 'Vocabulary',
-      desc: 'Expand your word power with synonyms, antonyms, and word meanings.',
-      icon: 'V',
-      href: '/vocabulary',
-      color: '#16a34a',
-      bg: '#f0fdf4'
-    },
-    {
-      title: 'Reading',
-      desc: 'Practice reading comprehension with short passages and questions.',
-      icon: 'R',
-      href: '/reading',
-      color: '#9333ea',
-      bg: '#faf5ff'
+<script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
+
+  // --- Configuration ---
+  const VALID_TOKEN = 'INGGRIS11';
+  const EXAM_DURATION_MINUTES = 90;
+  const INITIAL_TIME_SECONDS = EXAM_DURATION_MINUTES * 60; // 5400 seconds
+  const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSc_YOUR_FORM_ID_HERE/viewform?embedded=true';
+
+  // --- Reactive State (Svelte 5 Runes) ---
+  let isAuthenticated = $state(false);
+  let timeLeft = $state(INITIAL_TIME_SECONDS);
+  let tokenInput = $state('');
+  let errorMessage = $state('');
+  let isTimeExpired = $state(false);
+
+  // Interval reference for timer cleanup
+  let timerInterval: ReturnType<typeof setInterval> | null = null;
+
+  // --- Formatted Time Helper (HH:MM:SS or MM:SS) ---
+  const formattedTime = $derived.by(() => {
+    const hours = Math.floor(timeLeft / 3600);
+    const minutes = Math.floor((timeLeft % 3600) / 60);
+    const seconds = timeLeft % 60;
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    if (hours > 0) {
+      return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
     }
-  ];
+    return `${pad(minutes)}:${pad(seconds)}`;
+  });
+
+  // --- Timer Controls ---
+  function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+
+    timerInterval = setInterval(() => {
+      if (timeLeft > 0) {
+        timeLeft -= 1;
+      } else {
+        stopTimer();
+        isTimeExpired = true;
+      }
+    }, 1000);
+  }
+
+  function stopTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  // --- Token Validation ---
+  function handleTokenSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    errorMessage = '';
+
+    const cleanInput = tokenInput.trim().toUpperCase();
+
+    if (cleanInput === VALID_TOKEN) {
+      isAuthenticated = true;
+      startTimer();
+    } else {
+      errorMessage = 'Token yang Anda masukkan salah. Silakan coba lagi.';
+    }
+  }
+
+  // --- Security & Event Listeners ---
+  function preventContextMenu(e: MouseEvent) {
+    e.preventDefault();
+  }
+
+  onMount(() => {
+    // Disable right-click context menu globally
+    window.addEventListener('contextmenu', preventContextMenu);
+  });
+
+  onDestroy(() => {
+    stopTimer();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('contextmenu', preventContextMenu);
+    }
+  });
 </script>
 
-<main>
-  <section class="hero">
-    <span class="badge">English Exam Center</span>
-    <h1>Master Your <em>English Skills</em></h1>
-    <p>Choose an exam category below to begin. Each exam has 5 questions and instant feedback.</p>
-  </section>
+<div class="exam-app">
+  {#if !isAuthenticated}
+    <!-- LOGIN / TOKEN FORM VIEW -->
+    <div class="login-container">
+      <div class="login-card">
+        <div class="icon-badge">🔒</div>
+        <h1>Portal Ujian Online</h1>
+        <p class="subtitle">Silakan masukkan token ujian untuk memulai sesi Anda (Durasi: {EXAM_DURATION_MINUTES} Menit).</p>
 
-  <section class="cards" aria-label="Exam categories">
-    {#each exams as exam, i}
-      <a
-        href={exam.href}
-        class="card"
-        style="--color: {exam.color}; --bg: {exam.bg}; animation-delay: {i * 0.08}s"
-      >
-        <div class="card-icon" aria-hidden="true">{exam.icon}</div>
-        <div class="card-body">
-          <h2>{exam.title}</h2>
-          <p>{exam.desc}</p>
+        <form onsubmit={handleTokenSubmit} class="token-form">
+          <div class="field-group">
+            <label for="token">Token Ujian</label>
+            <input
+              id="token"
+              type="text"
+              bind:value={tokenInput}
+              placeholder="Contoh: INGGRIS11"
+              autocomplete="off"
+              required
+            />
+          </div>
+
+          {#if errorMessage}
+            <div class="error-banner">
+              ⚠️ {errorMessage}
+            </div>
+          {/if}
+
+          <button type="submit" class="btn-submit">
+            Mulai Ujian
+          </button>
+        </form>
+      </div>
+    </div>
+  {:else if isTimeExpired}
+    <!-- TIME EXPIRED VIEW -->
+    <div class="expired-container">
+      <div class="expired-card">
+        <div class="expired-icon">⏳</div>
+        <h2>Waktu Ujian Telah Habis</h2>
+        <p>Sesi ujian Anda telah berakhir secara otomatis. Terima kasih telah mengikuti ujian ini.</p>
+      </div>
+    </div>
+  {:else}
+    <!-- EXAM VIEW (AUTHENTICATED) -->
+    <div class="exam-wrapper">
+      <!-- TOP TIMER BAR -->
+      <header class="top-bar">
+        <div class="exam-title">
+          <span class="pulse-indicator"></span>
+          <span>Sesi Ujian Aktif</span>
         </div>
-        <div class="card-footer">
-          <span>5 Questions</span>
-          <span class="arrow">Start &rarr;</span>
+        <div class="timer-badge" class:warning={timeLeft < 300}>
+          <span class="timer-label">Sisa Waktu:</span>
+          <span class="timer-value">{formattedTime}</span>
         </div>
-      </a>
-    {/each}
-  </section>
-</main>
+      </header>
+
+      <!-- FULL-SCREEN GOOGLE FORM IFRAME -->
+      <main class="iframe-container">
+        <iframe
+          src={GOOGLE_FORM_URL}
+          title="Google Form Exam"
+          frameborder="0"
+          marginheight="0"
+          marginwidth="0"
+        >
+          Memuat halaman ujian...
+        </iframe>
+      </main>
+    </div>
+  {/if}
+</div>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Outfit:wght@400;500;600;700&display=swap');
-
-  :global(*, *::before, *::after) {
-    box-sizing: border-box;
-  }
-
-  :global(body) {
+  :global(body, html) {
     margin: 0;
-    min-height: 100vh;
-    background: #f7f7f3;
-    color: #171717;
-    font-family: 'Outfit', sans-serif;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #f8fafc;
+    color: #0f172a;
+    user-select: none; /* Disables text selection for added exam security */
   }
 
-  main {
-    width: min(100%, 760px);
-    margin: 0 auto;
-    padding: 4rem 1rem 3rem;
+  .exam-app {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
-  .hero {
-    margin-bottom: 2.5rem;
-    text-align: center;
-  }
-
-  .badge {
-    display: inline-block;
-    margin-bottom: 1.1rem;
-    border-radius: 999px;
-    background: #171717;
-    color: #fff;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    padding: 0.35rem 0.9rem;
-    text-transform: uppercase;
-  }
-
-  h1,
-  h2,
-  p {
-    margin: 0;
-  }
-
-  h1 {
-    margin-bottom: 1rem;
-    color: #171717;
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(2.2rem, 8vw, 4rem);
-    line-height: 1;
-  }
-
-  h1 em {
-    color: #2563eb;
-    font-style: italic;
-  }
-
-  .hero p {
-    max-width: 31rem;
-    margin: 0 auto;
-    color: #626262;
-    font-size: 1rem;
-    line-height: 1.7;
-  }
-
-  .cards {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .card {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 1rem;
-    border: 2px solid transparent;
-    border-radius: 8px;
-    background: var(--bg);
-    color: inherit;
-    padding: 1.25rem;
-    text-decoration: none;
-    animation: fade-up 0.36s ease both;
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease,
-      transform 0.2s ease;
-  }
-
-  .card:hover,
-  .card:focus-visible {
-    border-color: var(--color);
-    box-shadow: 0 12px 28px rgba(23, 23, 23, 0.08);
-    transform: translateY(-2px);
-  }
-
-  @keyframes fade-up {
-    from {
-      opacity: 0;
-      transform: translateY(0.8rem);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .card-icon {
+  /* --- LOGIN STYLES --- */
+  .login-container {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 3.4rem;
-    height: 3.4rem;
-    border-radius: 8px;
-    background: #fff;
-    box-shadow: 0 2px 10px rgba(23, 23, 23, 0.06);
-    color: var(--color);
-    flex-shrink: 0;
-    font-size: 1.35rem;
-    font-weight: 800;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   }
 
-  .card-body h2 {
-    margin-bottom: 0.3rem;
-    color: var(--color);
-    font-family: 'Playfair Display', serif;
-    font-size: 1.28rem;
+  .login-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 420px;
+    padding: 2.5rem;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    text-align: center;
   }
 
-  .card-body p {
-    color: #626262;
+  .icon-badge {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .login-card h1 {
+    font-size: 1.65rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: #0f172a;
+  }
+
+  .subtitle {
     font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 1.75rem;
     line-height: 1.5;
   }
 
-  .card-footer {
-    display: grid;
-    justify-items: end;
-    gap: 0.25rem;
-    color: #737373;
+  .token-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    text-align: left;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .field-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .field-group input {
+    padding: 0.85rem 1rem;
+    font-size: 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: center;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .field-group input:focus {
+    border-color: #2563eb;
+  }
+
+  .error-banner {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    text-align: center;
+  }
+
+  .btn-submit {
+    background-color: #2563eb;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.85rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+  }
+
+  .btn-submit:hover {
+    background-color: #1d4ed8;
+  }
+
+  .btn-submit:active {
+    transform: scale(0.99);
+  }
+
+  /* --- EXAM WRAPPER STYLES --- */
+  .exam-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100vh;
+  }
+
+  .top-bar {
+    height: 56px;
+    background-color: #0f172a;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+  }
+
+  .exam-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .pulse-indicator {
+    width: 10px;
+    height: 10px;
+    background-color: #22c55e;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #22c55e;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+  }
+
+  .timer-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #1e293b;
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    border: 1px solid #334155;
+    transition: background-color 0.3s, border-color 0.3s;
+  }
+
+  .timer-badge.warning {
+    background-color: #7f1d1d;
+    border-color: #ef4444;
+    color: #fecaca;
+    animation: alertPulse 1s infinite alternate;
+  }
+
+  @keyframes alertPulse {
+    from { box-shadow: 0 0 0px #ef4444; }
+    to { box-shadow: 0 0 10px #ef4444; }
+  }
+
+  .timer-label {
     font-size: 0.8rem;
-    white-space: nowrap;
+    text-transform: uppercase;
+    color: #94a3b8;
   }
 
-  .arrow {
-    color: var(--color);
-    font-size: 0.9rem;
+  .warning .timer-label {
+    color: #fca5a5;
+  }
+
+  .timer-value {
+    font-family: monospace;
+    font-size: 1.15rem;
     font-weight: 700;
+    letter-spacing: 0.05em;
   }
 
-  @media (max-width: 640px) {
-    main {
-      padding-top: 2.5rem;
-    }
+  .iframe-container {
+    flex: 1;
+    width: 100%;
+    background-color: #ffffff;
+    position: relative;
+  }
 
-    .card {
-      grid-template-columns: auto minmax(0, 1fr);
-    }
+  .iframe-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
 
-    .card-footer {
-      grid-column: 2;
-      justify-items: start;
-    }
+  /* --- EXPIRED VIEW STYLES --- */
+  .expired-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background-color: #0f172a;
+  }
+
+  .expired-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 450px;
+    padding: 3rem 2rem;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  .expired-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .expired-card h2 {
+    font-size: 1.75rem;
+    color: #dc2626;
+    margin: 0 0 0.75rem 0;
+  }
+
+  .expired-card p {
+    font-size: 0.95rem;
+    color: #475569;
+    line-height: 1.6;
+    margin: 0;
   }
 </style>
