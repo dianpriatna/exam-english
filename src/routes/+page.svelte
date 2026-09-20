@@ -3,9 +3,9 @@
 
   // --- Configuration ---
   const VALID_TOKEN = 'INGGRIS11';
-  const EXAM_DURATION_MINUTES = 90;
-  const INITIAL_TIME_SECONDS = EXAM_DURATION_MINUTES * 60; // 5400 seconds
-  const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSc_YOUR_FORM_ID_HERE/viewform?embedded=true';
+  const EXAM_DURATION_MINUTES = 40;
+  const INITIAL_TIME_SECONDS = EXAM_DURATION_MINUTES * 60; // 2400 seconds
+  const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe7Py8G9l9XMAo-O4H4cZA9O9iQ_2oVAl_7HD0-kU7No2hDPQ/viewform?embedded=true';
 
   // --- Reactive State (Svelte 5 Runes) ---
   let isAuthenticated = $state(false);
