@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
 
   // --- Configuration ---
-  const VALID_TOKEN = 'INGGRIS11';
+  const VALID_TOKEN = '11ENGLISH';
   const EXAM_DURATION_MINUTES = 40;
   const INITIAL_TIME_SECONDS = EXAM_DURATION_MINUTES * 60; // 2400 seconds
   const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe7Py8G9l9XMAo-O4H4cZA9O9iQ_2oVAl_7HD0-kU7No2hDPQ/viewform?embedded=true';
@@ -166,7 +166,7 @@
               id="token"
               type="text"
               bind:value={tokenInput}
-              placeholder="Contoh: INGGRIS11"
+              placeholder="Contoh: 11ENGLISH"
               autocomplete="off"
               required
             />
