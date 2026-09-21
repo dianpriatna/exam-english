@@ -228,6 +228,7 @@
         <iframe
           src={GOOGLE_FORM_URL}
           title="Google Form Exam"
+          sandbox="allow-scripts allow-same-origin allow-forms"
           frameborder="0"
           marginheight="0"
           marginwidth="0"
